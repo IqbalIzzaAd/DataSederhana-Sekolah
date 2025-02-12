@@ -7,14 +7,15 @@
         <div class="bg-white shadow sm:rounded-lg p-6">
             <h3 class="text-2xl font-semibold mb-4 text-gray-700">Data Kelas</h3>
 
+            <!-- Loading Indicator -->
+            <div id="loading" class="text-center text-gray-500">Memuat data...</div>
+
             <!-- Container untuk data AJAX -->
-            <div id="kelasContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Data akan dimasukkan lewat AJAX -->
-            </div>
+            <div id="kelasContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
     </div>
 
-    <!-- Load jQuery untuk AJAX -->
+    <!-- Load jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
@@ -22,12 +23,18 @@
             $.ajax({
                 url: "{{ route('api.dashboard') }}",
                 type: "GET",
+                beforeSend: function() {
+                    $("#loading").show(); // Tampilkan loading sebelum data muncul
+                },
                 success: function(response) {
+                    $("#loading").hide(); // Sembunyikan loading setelah data muncul
                     let kelasHtml = "";
-                    
+
                     response.kelas.forEach(function(kelas) {
-                        let guruList = kelas.gurus.map(g => `<li>${g.nama}</li>`).join("");
-                        let siswaList = kelas.siswas.map(s => `<li>${s.nama}</li>`).join("");
+                        let guruList = kelas.gurus.length > 0 ? 
+                            kelas.gurus.map(g => `<li>${g.nama}</li>`).join("") : "<li>Belum ada guru</li>";
+                        let siswaList = kelas.siswas.length > 0 ? 
+                            kelas.siswas.map(s => `<li>${s.nama}</li>`).join("") : "<li>Belum ada siswa</li>";
 
                         kelasHtml += `
                             <div class="bg-white shadow-lg rounded-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow">
@@ -48,11 +55,11 @@
 
                     $("#kelasContainer").html(kelasHtml);
                 },
-                error: function() {
-                    alert("Gagal mengambil data kelas!");
+                error: function(xhr) {
+                    $("#loading").html("<p class='text-red-500'>Gagal mengambil data kelas!</p>");
+                    console.log(xhr.responseJSON);
                 }
             });
         });
     </script>
-
 </x-app-layout>

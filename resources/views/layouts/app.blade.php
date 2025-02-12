@@ -13,6 +13,7 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
         
@@ -37,7 +38,7 @@
         </div>
 
         <!-- jQuery & CSRF Setup for AJAX -->
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        
         <script>
             $.ajaxSetup({
                 headers: {

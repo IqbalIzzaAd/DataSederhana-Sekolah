@@ -7,50 +7,68 @@ use Illuminate\Http\Request;
 
 class KelasController extends Controller
 {
-    public function index() {
-        $kelas = Kelas::with(['siswas', 'gurus'])->get();
-        return view('kelas.index', compact('kelas'));
+    public function index()
+    {
+        if (request()->ajax()) {
+            $kelas = Kelas::with(['siswas', 'gurus'])->get();
+            return response()->json($kelas);
+        }
+        return view('kelas.index');
     }
 
-    public function create() {
-        return view('kelas.create');
-    }
-
-    public function store(Request $request) {
-        // Tambahkan validasi input
+    public function store(Request $request)
+    {
         $request->validate([
             'nama' => 'required|string|max:255|unique:kelas,nama',
+            'guru_id' => 'nullable|exists:gurus,id|unique:kelas,guru_id', // Pastikan hanya satu guru per kelas
         ]);
 
-        Kelas::create($request->only('nama'));
-        return redirect()->route('kelas.index')->with('success', 'Kelas berhasil ditambahkan.');
+        $kelas = Kelas::create($request->only('nama', 'guru_id'));
+
+        return response()->json([
+            'message' => 'Kelas berhasil ditambahkan!',
+            'kelas' => $kelas
+        ]);
     }
 
-    public function show(Kelas $kelas) {
+    public function show(Kelas $kelas)
+    {
+        if (request()->ajax()) {
+            return response()->json($kelas->load(['siswas', 'gurus']));
+        }
         return view('kelas.show', compact('kelas'));
     }
 
-    public function edit(Kelas $kelas) {
-        return view('kelas.edit', compact('kelas'));
-    }
-
-    public function update(Request $request, Kelas $kelas) {
-        // Tambahkan validasi input
+    public function update(Request $request, Kelas $kelas)
+    {
         $request->validate([
             'nama' => 'required|string|max:255|unique:kelas,nama,' . $kelas->id,
+            'guru_id' => 'nullable|exists:gurus,id|unique:kelas,guru_id,' . $kelas->id, // Pastikan hanya satu guru per kelas
         ]);
 
-        $kelas->update($request->only('nama'));
-        return redirect()->route('kelas.index')->with('success', 'Kelas berhasil diperbarui.');
+        $kelas->update($request->only('nama', 'guru_id'));
+
+        return response()->json([
+            'message' => 'Kelas berhasil diperbarui!',
+            'kelas' => $kelas
+        ]);
     }
 
-    public function destroy(Kelas $kelas) {
-        // Cek apakah kelas masih memiliki siswa atau guru sebelum menghapus
-        if ($kelas->siswas()->exists() || $kelas->gurus()->exists()) {
-            return redirect()->route('kelas.index')->with('error', 'Kelas tidak bisa dihapus karena masih memiliki siswa atau guru.');
-        }
+    public function destroy(Kelas $kelas)
+    {
+        // Hapus semua siswa yang terkait dengan kelas
+        $kelas->siswas()->delete();
 
+        // Hapus semua guru yang terkait dengan kelas
+        $kelas->gurus()->delete();
+
+        // Hapus kelas setelah semua relasi dihapus
         $kelas->delete();
-        return redirect()->route('kelas.index')->with('success', 'Kelas berhasil dihapus.');
+
+        return response()->json([
+            'message' => 'Kelas beserta semua guru dan siswa telah berhasil dihapus!'
+        ]);
     }
 }
+
+

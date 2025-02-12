@@ -6,9 +6,9 @@
     <div class="py-6 max-w-7xl mx-auto">
         <div class="flex justify-between items-center">
             <!-- Dropdown Filter Kelas -->
-            <form action="{{ route('guru.index') }}" method="GET">
-                <select name="kelas_id" onchange="this.form.submit()" class="border px-4 py-2 rounded">
-                    <option value="">Semua Kelas &nbsp &nbsp</option>
+            <form id="filterKelasForm">
+                <select name="kelas_id" id="filterKelas" class="border px-4 py-2 rounded">
+                    <option value="">Semua Kelas</option>
                     @foreach($kelas as $k)
                         <option value="{{ $k->id }}" {{ request('kelas_id') == $k->id ? 'selected' : '' }}>
                             {{ $k->nama }}
@@ -28,9 +28,9 @@
                     <th class="border px-4 py-2">Aksi</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="guruList">
                 @foreach($gurus as $guru)
-                    <tr>
+                    <tr id="guruRow{{ $guru->id }}">
                         <td class="border px-4 py-2">{{ $guru->nama }}</td>
                         <td class="border px-4 py-2">
                             @foreach($guru->kelas as $kelas)
@@ -40,14 +40,41 @@
                         <td class="border px-4 py-2">
                             <a href="{{ route('guru.show', $guru->id) }}" class="bg-green-500 text-white px-2 py-1 rounded">Detail</a>
                             <a href="{{ route('guru.edit', $guru->id) }}" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</a>
-                            <form action="{{ route('guru.destroy', $guru->id) }}" method="POST" class="inline">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded">Hapus</button>
-                            </form>
+                            <button class="delete-btn bg-red-500 text-white px-2 py-1 rounded" data-id="{{ $guru->id }}">Hapus</button>
                         </td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
+
+    <script>
+        $(document).ready(function() {
+            // Hapus Guru dengan Konfirmasi
+            $(document).on("click", ".delete-btn", function() {
+                let guruId = $(this).data("id");
+                let row = $("#guruRow" + guruId);
+
+                if (confirm("Apakah Anda yakin ingin menghapus guru ini?")) {
+                    $.ajax({
+                        url: "/guru/" + guruId,
+                        method: "DELETE",
+                        data: { _token: "{{ csrf_token() }}" },
+                        success: function(response) {
+                            alert(response.message);
+                            row.fadeOut(); // Hilangkan baris tabel setelah berhasil dihapus
+                        },
+                        error: function(xhr) {
+                            alert("Error: " + xhr.responseJSON.error);
+                        }
+                    });
+                }
+            });
+
+            // Filter Kelas Otomatis
+            $("#filterKelas").change(function() {
+                $("#filterKelasForm").submit();
+            });
+        });
+    </script>
 </x-app-layout>
