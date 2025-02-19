@@ -4,93 +4,192 @@
     </x-slot>
 
     <div class="py-6 max-w-7xl mx-auto">
-        <div class="flex justify-between items-center">
-            <!-- Dropdown Filter Kelas -->
-            <form id="filterKelasForm">
-                <select name="kelas_id" id="filterKelas" class="border px-4 py-2 rounded">
-                    <option value="">Semua Kelas</option>
-                    @foreach($kelas as $k)
-                        <option value="{{ $k->id }}" {{ request('kelas_id') == $k->id ? 'selected' : '' }}>
-                            {{ $k->nama }}
-                        </option>
-                    @endforeach
-                </select>
-            </form>
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+        <button id="tambahSiswaBtn" class="bg-blue-500 text-white px-4 py-2 rounded mb-4">Tambah Siswa</button>
 
-            <a href="{{ route('siswa.create') }}" class="bg-blue-500 text-white px-4 py-2 rounded">Tambah Siswa</a>
+        <div class="relative">
+            <input type="text" id="search" class="border border-gray-300 rounded px-3 py-1 pl-8" placeholder="Cari siswa...">
+            <i class="absolute left-2 top-1 text-gray-500 bi bi-search"></i>
         </div>
+    </div>
 
-        <table class="w-full mt-4 border text-center">
+        <table class="w-full border text-center">
             <thead>
                 <tr class="bg-gray-200">
-                    <th class="border px-4 py-2">Nama Siswa</th>
+                    <th class="border px-4 py-2">NIS</th>
+                    <th class="border px-4 py-2">Nama</th>
                     <th class="border px-4 py-2">Kelas</th>
                     <th class="border px-4 py-2">Aksi</th>
                 </tr>
             </thead>
-            <tbody id="siswaList">
-                @foreach($siswas as $siswa)
-                    <tr id="siswaRow{{ $siswa->id }}">
-                        <td class="border px-4 py-2">{{ $siswa->nama }}</td>
-                        <td class="border px-4 py-2">{{ $siswa->kelas->nama }}</td>
-                        <td class="border px-4 py-2">
-                            <a href="{{ route('siswa.show', $siswa->id) }}" class="bg-green-500 text-white px-2 py-1 rounded">Detail</a>
-                            <a href="{{ route('siswa.edit', $siswa->id) }}" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</a>
-                            <button class="delete-btn bg-red-500 text-white px-2 py-1 rounded" data-id="{{ $siswa->id }}">Hapus</button>
-                        </td>
-                    </tr>
-                @endforeach
+            <tbody id="siswaTable">
+                <!-- Data akan di-load dengan AJAX -->
             </tbody>
         </table>
     </div>
+
+    <!-- MODAL FORM SISWA -->
+    <div id="siswaModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded w-1/3">
+            <h2 id="modalTitle" class="text-xl font-bold mb-4">Tambah Siswa</h2>
+            <form id="siswaForm">
+                @csrf
+                <input type="hidden" id="siswa_id">
+
+                <label class="block">NIS</label>
+                <input type="text" id="nis" name="nis" class="border rounded w-full px-3 py-2 mt-1" required>
+
+                <label class="block mt-2">Nama</label>
+                <input type="text" id="nama" name="nama" class="border rounded w-full px-3 py-2 mt-1" required>
+
+                <label class="block mt-2">Pilih Kelas</label>
+                <select id="kelas_id" name="kelas_id" class="border rounded w-full px-3 py-2 mt-1">
+                    @foreach ($kelas as $k)
+                        <option value="{{ $k->id }}">{{ $k->nama }}</option>
+                    @endforeach
+                </select>
+
+                <div class="mt-4 flex justify-end">
+                    <button type="button" id="closeModal" class="bg-gray-500 text-white px-4 py-2 rounded mr-2">Batal</button>
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT AJAX -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        let allData = []; // Menyimpan semua data siswa untuk pencarian
+
         $(document).ready(function() {
-            // Filter kelas otomatis dengan AJAX
-            $("#filterKelas").change(function() {
-                let kelasId = $(this).val();
+            loadSiswa();
+
+            function loadSiswa() {
                 $.ajax({
                     url: "{{ route('siswa.index') }}",
                     method: "GET",
-                    data: { kelas_id: kelasId },
                     success: function(response) {
-                        let rows = "";
-                        response.siswas.forEach(siswa => {
-                            rows += `
-                                <tr id="siswaRow${siswa.id}">
-                                    <td class="border px-4 py-2">${siswa.nama}</td>
-                                    <td class="border px-4 py-2">${siswa.kelas.nama}</td>
-                                    <td class="border px-4 py-2">
-                                        <a href="/siswa/${siswa.id}" class="bg-green-500 text-white px-2 py-1 rounded">Detail</a>
-                                        <a href="/siswa/${siswa.id}/edit" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</a>
-                                        <button class="delete-btn bg-red-500 text-white px-2 py-1 rounded" data-id="${siswa.id}">Hapus</button>
-                                    </td>
-                                </tr>`;
-                        });
-                        $("#siswaList").html(rows);
+                        allData = response; // Simpan data siswa
+                        updateTable(allData); // Tampilkan data awal
+                    }
+                });
+            }
+
+            function updateTable(data) {
+                let rows = "";
+                data.forEach(function(siswa) {
+                    let kelas = siswa.kelas ? siswa.kelas.nama : "Tidak ada";
+                    rows += `
+                        <tr>
+                            <td class="border px-4 py-2">${siswa.nis}</td>
+                            <td class="border px-4 py-2">${siswa.nama}</td>
+                            <td class="border px-4 py-2">${kelas}</td>
+                            <td class="border px-4 py-2">
+                                <button class="bg-green-500 text-white px-2 py-1 rounded show-btn" data-id="${siswa.id}">Lihat</button>
+                                <button class="bg-yellow-500 text-white px-2 py-1 rounded edit-btn" data-id="${siswa.id}">Edit</button>
+                                <button class="bg-red-500 text-white px-2 py-1 rounded delete-btn" data-id="${siswa.id}">Hapus</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                $("#siswaTable").html(rows);
+            }
+
+            // Pencarian siswa berdasarkan nama
+            $("#search").on("keyup", function() {
+                let keyword = $(this).val().toLowerCase();
+                let filteredData = allData.filter(siswa => siswa.nama.toLowerCase().includes(keyword));
+                updateTable(filteredData);
+            });
+
+            // Buka modal tambah siswa
+            $("#tambahSiswaBtn").on("click", function() {
+                $("#siswaForm")[0].reset();
+                $("#siswa_id").val("");
+                $("#modalTitle").text("Tambah Siswa");
+                $("#siswaModal").removeClass("hidden");
+            });
+
+            // Tutup modal
+            $("#closeModal").on("click", function() {
+                $("#siswaModal").addClass("hidden");
+            });
+
+            // Tambah/Edit siswa
+            $("#siswaForm").on("submit", function(e) {
+                e.preventDefault();
+
+                let id = $("#siswa_id").val();
+                let url = id ? "/siswa/" + id : "{{ route('siswa.store') }}";
+                let method = id ? "PUT" : "POST";
+
+                $.ajax({
+                    url: url,
+                    method: method,
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        nis: $("#nis").val(),
+                        nama: $("#nama").val(),
+                        kelas_id: $("#kelas_id").val()
+                    },
+                    success: function(response) {
+                        alert(response.message);
+                        $("#siswaModal").addClass("hidden");
+                        loadSiswa();
                     }
                 });
             });
 
-            // Hapus siswa dengan AJAX
-            $(document).on("click", ".delete-btn", function() {
-                let siswaId = $(this).data("id");
-                let row = $("#siswaRow" + siswaId);
+            // Edit siswa
+            $(document).on("click", ".edit-btn", function() {
+                let id = $(this).data("id");
 
-                if (confirm("Apakah Anda yakin ingin menghapus siswa ini?")) {
+                $.ajax({
+                    url: "/siswa/" + id,
+                    method: "GET",
+                    success: function(response) {
+                        $("#siswa_id").val(response.id);
+                        $("#nis").val(response.nis);
+                        $("#nama").val(response.nama);
+                        $("#kelas_id").val(response.kelas_id);
+
+                        $("#modalTitle").text("Edit Siswa");
+                        $("#siswaModal").removeClass("hidden");
+                    }
+                });
+            });
+
+            // Lihat siswa
+            $(document).on("click", ".show-btn", function() {
+                let id = $(this).data("id");
+
+                $.ajax({
+                    url: "/siswa/" + id,
+                    method: "GET",
+                    success: function(response) {
+                        alert(`NIS: ${response.nis}\nNama: ${response.nama}\nKelas: ${response.kelas.nama}`);
+                    }
+                });
+            });
+
+            // Hapus siswa
+            $(document).on("click", ".delete-btn", function() {
+                let id = $(this).data("id");
+
+                if (confirm("Yakin ingin menghapus siswa ini?")) {
                     $.ajax({
-                        url: "/siswa/" + siswaId,
+                        url: "/siswa/" + id,
                         method: "DELETE",
-                        data: { _token: "{{ csrf_token() }}" },
+                        headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" },
                         success: function(response) {
                             alert(response.message);
-                            row.fadeOut();
-                        },
-                        error: function(xhr) {
-                            alert("Gagal menghapus siswa!");
+                            loadSiswa();
                         }
                     });
                 }
             });
+
         });
     </script>
 </x-app-layout>

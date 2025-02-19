@@ -9,7 +9,8 @@ return new class extends Migration {
         Schema::create('siswas', function (Blueprint $table) {
             $table->id();
             $table->string('nama');
-            $table->foreignId('kelas_id')->constrained('kelas')->onDelete('cascade');
+            $table->string('nis')->unique(); // NIS tetap unik global
+            $table->foreignId('kelas_id')->nullable()->constrained('kelas')->onDelete('set null'); // Kelas bisa dihapus tanpa menghapus siswa
             $table->timestamps();
         });
     }

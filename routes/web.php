@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
         'kelas' => 'kelas'
     ]);
     Route::resource('guru', GuruController::class);
+    Route::get('/guru-data',[GuruController::class,'getGurus'])->name('guru.getGurus');
     Route::resource('siswa', SiswaController::class);
 });
 
